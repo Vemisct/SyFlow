@@ -1,24 +1,8 @@
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
+from django.shortcuts import render
 
-@api_view(['GET'])
 def WelcomeVP(request):
     """
-    Точка входу для сторінки вітання.
-    Frontend (React) зробить сюди запит, щоб отримати головне повідомлення.
+    Чиста в'юшка для сторінки привітання.
+    Відображає автономний шаблон WelcomeTP.
     """
-    return Response({
-        "status": "success",
-        "message": "Get into the flow, with SyFlow. Вітаємо у новому руслі!"
-    })
-
-@api_view(['POST'])
-def LoginVP(request):
-    """
-    Заглушка для входу. 
-    Пізніше ми додамо сюди логіку Simple JWT та перевірку Google-токенів.
-    """
-    return Response({
-        "status": "info",
-        "message": "Тут буде генеруватися токен доступу для учня."
-    })
+    return render(request, 'WelcomeTP.html')
