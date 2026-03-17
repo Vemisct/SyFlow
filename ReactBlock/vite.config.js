@@ -11,8 +11,8 @@ export default defineConfig({
       output: {
         entryFileNames: 'WelcomeRP.js',
         assetFileNames: '[name].[ext]',
-        format: 'iife', // <--- ОСЬ ЦЕЙ РЯДОК ВИРІЖЕ ВСІ EXPORT
-        name: 'WelcomeApp' // Обов'язкове ім'я для формату iife
+        format: 'iife',
+        name: 'WelcomeApp'
       }
     }
   }
