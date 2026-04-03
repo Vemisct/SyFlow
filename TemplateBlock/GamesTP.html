@@ -1,0 +1,12 @@
+{% extends "BaseTP.html" %}
+{% load static %}
+
+{% block title %}SyFlow | Симуляції{% endblock %}
+
+{% block content %}
+    <div id="games-root"></div>
+{% endblock %}
+
+{% block extra_js %}
+    <script type="module" src="{% static 'React/games.js' %}"></script>
+{% endblock %}

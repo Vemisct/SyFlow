@@ -77,9 +77,33 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
-# Куди направляти учня після успішного входу
-LOGIN_REDIRECT_URL = '/'
+# Куди перенаправляти користувача після успішного входу через Google
+LOGIN_REDIRECT_URL = '/entrance/'
 LOGOUT_REDIRECT_URL = '/'
+
+# Налаштування провайдера Google
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        # Запитуємо у Google базовий профіль (аватарка, ім'я) та пошту
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        # Цей параметр гарантує, що Google завжди буде питати, 
+        # який акаунт вибрати (зручно для розробки)
+        'OAUTH_PKCE_ENABLED': True,
+    }
+}
 
 # Вказуємо Django використовувати нашу абстрактну модель користувача
 AUTH_USER_MODEL = 'HeartBlock.UserProfile'
+
+# Вимагаємо пошту від Google обов'язково
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+
+# Дозволяє прямий перехід до Google без потворної сторінки підтвердження
+SOCIALACCOUNT_LOGIN_ON_GET = True

@@ -7,12 +7,15 @@ export default defineConfig({
     outDir: '../StaticBlock/react',
     emptyOutDir: true,
     rollupOptions: {
-      input: 'src/index.jsx',
+      input: {
+        welcome: 'src/Indexes/welcome_index.jsx',
+        entrance: 'src/Indexes/entrance_index.jsx',
+        home: 'src/Indexes/home_index.jsx',
+        games: 'src/Indexes/games_index.jsx',
+      },
       output: {
-        entryFileNames: 'WelcomeRP.js',
+        entryFileNames: '[name].js',
         assetFileNames: '[name].[ext]',
-        format: 'iife',
-        name: 'WelcomeApp'
       }
     }
   }

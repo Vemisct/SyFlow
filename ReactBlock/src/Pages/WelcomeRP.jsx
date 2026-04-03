@@ -1,279 +1,271 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { motion, useScroll, useSpring, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// --- НАЛАШТУВАННЯ ГРИ PyRun ---
-const GRID_SIZE = 20;
-const INITIAL_SNAKE = [{ x: 10, y: 10 }];
-const INITIAL_DIRECTION = { x: 0, y: -1 }; // Рух вгору
+// ПАЛІТРА СИСТЕМИ
+const COLORS = {
+    blue: '#3b82f6',
+    purple: '#a855f7',
+    green: '#10b981',
+    pink: '#ec4899'
+};
 
-const WelcomeRP = () => {
-    // --- АНІМАЦІЇ СТОРІНКИ ---
-    const { scrollYProgress } = useScroll();
-    const smoothProgress = useSpring(scrollYProgress, { stiffness: 50, damping: 20 });
-    const fadeUp = { hidden: { opacity: 0, y: 60 }, show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } } };
+// --- ВІДЖЕТИ ДЛЯ БЛОКІВ ---
 
-    // --- СТАН ГРИ PyRun ---
-    const [isGameOpen, setIsGameOpen] = useState(false);
-    const [snake, setSnake] = useState(INITIAL_SNAKE);
-    const [dir, setDir] = useState(INITIAL_DIRECTION);
-    const [food, setFood] = useState({ x: 5, y: 5 });
-    const [obstacles, setObstacles] = useState([]);
-    const [score, setScore] = useState(0);
-    const [gameOver, setGameOver] = useState(false);
-    const [isPlaying, setIsPlaying] = useState(false);
-
-    // Генерація випадкової координат
-    const randomCoord = () => ({
-        x: Math.floor(Math.random() * GRID_SIZE),
-        y: Math.floor(Math.random() * GRID_SIZE)
-    });
-
-    // Управління (Стрілки)
+const TerminalWidget = () => {
+    const [lines, setLines] = useState(['> Ініціалізація ядра...']);
+    
     useEffect(() => {
-        const handleKeyDown = (e) => {
-            if (!isGameOpen) return;
-            if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
-                e.preventDefault(); // Забороняємо скрол сторінки при грі
-            }
-            if (e.key === 'ArrowUp' && dir.y === 0) setDir({ x: 0, y: -1 });
-            if (e.key === 'ArrowDown' && dir.y === 0) setDir({ x: 0, y: 1 });
-            if (e.key === 'ArrowLeft' && dir.x === 0) setDir({ x: -1, y: 0 });
-            if (e.key === 'ArrowRight' && dir.x === 0) setDir({ x: 1, y: 0 });
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [dir, isGameOpen]);
-
-    // Ігровий цикл (Tick)
-    useEffect(() => {
-        if (!isPlaying || gameOver || !isGameOpen) return;
-
-        const moveSnake = () => {
-            setSnake(prevSnake => {
-                const head = { x: prevSnake[0].x + dir.x, y: prevSnake[0].y + dir.y };
-
-                // Зіткнення зі стінами
-                if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
-                    setGameOver(true); return prevSnake;
-                }
-                // Зіткнення з собою
-                if (prevSnake.some(segment => segment.x === head.x && segment.y === head.y)) {
-                    setGameOver(true); return prevSnake;
-                }
-                // Зіткнення з перешкодами (Багами)
-                if (obstacles.some(obs => obs.x === head.x && obs.y === head.y)) {
-                    setGameOver(true); return prevSnake;
-                }
-
-                const newSnake = [head, ...prevSnake];
-
-                // З'їли Документацію (Їжу)
-                if (head.x === food.x && head.y === food.y) {
-                    setScore(s => s + 10);
-                    setFood(randomCoord());
-                    // Кожні 30 очок з'являється новий баг (перешкода)
-                    if ((score + 10) % 30 === 0) {
-                        setObstacles(prev => [...prev, randomCoord()]);
-                    }
-                } else {
-                    newSnake.pop(); // Видаляємо хвіст, якщо не з'їли
-                }
-                return newSnake;
+        const cmds = [
+            '> Завантаження архітектури...', 
+            '> Аналіз синтаксису: ОК', 
+            '> Побудова нейронних зв\'язків...', 
+            '> SYFLOW.ACADEMY: ОНЛАЙН'
+        ];
+        const interval = setInterval(() => {
+            setLines(prev => {
+                if (prev.length >= 4) return ['> Очікування нових даних...'];
+                return [...prev, cmds[prev.length]];
             });
-        };
-
-        const speed = Math.max(50, 150 - (score * 0.5)); // Гра прискорюється!
-        const interval = setInterval(moveSnake, speed);
+        }, 2000);
         return () => clearInterval(interval);
-    }, [isPlaying, gameOver, dir, food, obstacles, score, isGameOpen]);
+    }, []);
 
-    const startGame = () => {
-        setSnake(INITIAL_SNAKE);
-        setDir(INITIAL_DIRECTION);
-        setScore(0);
-        setGameOver(false);
-        setObstacles([]);
-        setFood(randomCoord());
-        setIsPlaying(true);
+    return (
+        <div className="mt-4 p-4 shadow-sm" style={{ backgroundColor: '#050505', borderRadius: '12px', border: `1px solid ${COLORS.blue}40`, fontFamily: 'monospace', fontSize: '0.9rem', color: COLORS.blue, height: '140px', overflow: 'hidden' }}>
+            <div className="d-flex align-items-center mb-2 pb-2" style={{ borderBottom: `1px solid ${COLORS.blue}30` }}>
+                <i className="fa-solid fa-terminal me-2"></i> SysLog
+            </div>
+            {lines.map((line, i) => (
+                <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }} className="mb-1">
+                    {line}
+                </motion.div>
+            ))}
+        </div>
+    );
+};
+
+const WaveWidget = () => (
+    <div className="mt-4 p-4 shadow-sm" style={{ backgroundColor: '#050505', borderRadius: '12px', border: `1px solid ${COLORS.purple}40`, height: '140px', position: 'relative', overflow: 'hidden' }}>
+        <div className="d-flex justify-content-between align-items-center mb-2 position-relative z-1">
+            <span style={{ fontSize: '0.85rem', color: COLORS.purple, textTransform: 'uppercase', letterSpacing: '1px' }}><i className="fa-solid fa-wave-square me-2"></i>Ритм потоку</span>
+            <span className="fw-bold text-white">42 Hz</span>
+        </div>
+        <svg viewBox="0 0 500 100" className="w-100 position-absolute bottom-0 start-0" style={{ height: '80px', opacity: 0.8 }} preserveAspectRatio="none">
+            <motion.path 
+                d="M0,50 Q125,20 250,50 T500,50" fill="none" stroke={COLORS.purple} strokeWidth="3"
+                animate={{ d: ["M0,50 Q125,20 250,50 T500,50", "M0,50 Q125,80 250,50 T500,50", "M0,50 Q125,20 250,50 T500,50"] }}
+                transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+            />
+            <motion.path 
+                d="M0,50 Q125,80 250,50 T500,50" fill="none" stroke={COLORS.pink} strokeWidth="2" opacity="0.5"
+                animate={{ d: ["M0,50 Q125,80 250,50 T500,50", "M0,50 Q125,20 250,50 T500,50", "M0,50 Q125,80 250,50 T500,50"] }}
+                transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
+            />
+        </svg>
+    </div>
+);
+
+const ProgressWidget = () => {
+    const [count, setCount] = useState(0);
+    
+    useEffect(() => {
+        let start = 0; const end = 2048; const duration = 2500; const increment = end / (duration / 16);
+        const timer = setInterval(() => {
+            start += increment;
+            if (start >= end) { setCount(end); clearInterval(timer); } 
+            else { setCount(Math.floor(start)); }
+        }, 16);
+        return () => clearInterval(timer);
+    }, []);
+
+    return (
+        <div className="mt-4 p-4 shadow-sm d-flex flex-column justify-content-center" style={{ backgroundColor: '#050505', borderRadius: '12px', border: `1px solid ${COLORS.green}40`, height: '140px' }}>
+            <div className="d-flex align-items-center mb-2">
+                <i className="fa-solid fa-arrow-trend-up me-2" style={{ color: COLORS.green }}></i>
+                <span style={{ fontSize: '0.85rem', color: COLORS.green, textTransform: 'uppercase', letterSpacing: '1px' }}>Еволюційний індекс</span>
+            </div>
+            <div className="d-flex align-items-baseline">
+                <span className="fw-bold text-white" style={{ fontSize: '2.5rem', fontFamily: 'monospace' }}>{count}</span>
+                <span className="ms-2 text-secondary" style={{ fontSize: '1rem' }}>EXP</span>
+            </div>
+            <div className="w-100 mt-2" style={{ height: '4px', backgroundColor: '#18181b', borderRadius: '2px', overflow: 'hidden' }}>
+                <motion.div initial={{ width: 0 }} animate={{ width: '75%' }} transition={{ duration: 2, delay: 0.5 }} style={{ height: '100%', backgroundColor: COLORS.green, boxShadow: `0 0 10px ${COLORS.green}` }}></motion.div>
+            </div>
+        </div>
+    );
+};
+
+// --- КОМПОНЕНТ: СТРУКТУРОВАНИЙ БЛОК ---
+const StructuredModuleBlock = ({ title, description, iconClass, color, widget }) => (
+    <motion.div 
+        initial={{ opacity: 0, y: 30 }} 
+        whileInView={{ opacity: 1, y: 0 }} 
+        transition={{ duration: 0.8, ease: "easeOut" }} 
+        viewport={{ once: true, amount: 0.2 }}
+        className="position-relative w-100 mb-5"
+        style={{ 
+            backgroundColor: '#09090b', 
+            borderRadius: '24px', 
+            border: `1px solid rgba(255, 255, 255, 0.05)`,
+            overflow: 'hidden' 
+        }}
+    >
+        <div className="half-block-glow" style={{ 
+            position: 'absolute', bottom: 0, left: 0, width: '100%', height: '55%', 
+            background: `linear-gradient(to top, ${color}33, transparent)`, 
+            filter: 'blur(40px)', zIndex: 0, pointerEvents: 'none' 
+        }}></div>
+
+        <div className="position-relative z-1 p-4 p-md-5 d-flex justify-content-between align-items-center" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <h2 className="river-text m-0 fw-bold" style={{ fontSize: '3.5rem', background: `linear-gradient(90deg, #fff, ${color}, #fff)` }}>
+                {title}
+            </h2>
+            <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${color}40` }}>
+                <i className={iconClass} style={{ fontSize: '2.5rem', color: color, filter: `drop-shadow(0 0 10px ${color}80)` }}></i>
+            </div>
+        </div>
+
+        <div className="position-relative z-1 p-4 p-md-5 row align-items-start">
+            <div className="col-lg-7 mb-4 mb-lg-0 pe-lg-5">
+                <p style={{ fontSize: '1.25rem', color: '#a1a1aa', lineHeight: '1.7', fontWeight: 300, margin: 0 }}>
+                    {description}
+                </p>
+            </div>
+            <div className="col-lg-5">
+                {widget}
+            </div>
+        </div>
+    </motion.div>
+);
+
+
+// --- ГОЛОВНА СТОРІНКА ПРИВІТАННЯ ---
+const WelcomeRP = () => {
+    const [isEntering, setIsEntering] = useState(false);
+    const [waterPhase, setWaterPhase] = useState(0);
+
+    // Анімація течії для SVG фільтра
+    useEffect(() => {
+        let animationFrameId;
+        const animateWater = () => {
+            setWaterPhase(prev => (prev + 0.5) % 360);
+            animationFrameId = requestAnimationFrame(animateWater);
+        };
+        animateWater();
+        return () => cancelAnimationFrame(animationFrameId);
+    }, []);
+
+    const handleEntrance = (e) => {
+        e.preventDefault(); 
+        setIsEntering(true); 
+        setTimeout(() => { window.location.href = "/accounts/google/login/"; }, 1000);
     };
 
     return (
-        <div className="w-100 position-relative" style={{ color: '#e4e4e7', overflow: isGameOpen ? 'hidden' : 'auto', height: isGameOpen ? '100vh' : 'auto', backgroundColor: '#09090b' }}>
+        <div className="w-100 position-relative" style={{ color: '#e4e4e7', overflow: isEntering ? 'hidden' : 'auto', height: isEntering ? '100vh' : 'auto', backgroundColor: '#050505', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
             
-            {/* ТЛО: Інженерна сітка */}
-            <div className="position-fixed w-100 h-100" style={{
-                backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px)',
-                backgroundSize: '40px 40px', zIndex: 0, pointerEvents: 'none'
-            }}></div>
+            <style>
+                {`
+                .river-text {
+                    background-size: 200% auto !important;
+                    color: transparent !important;
+                    -webkit-background-clip: text !important;
+                    animation: text-flow 6s linear infinite;
+                    filter: url(#water-filter);
+                }
+                @keyframes text-flow {
+                    to { background-position: 200% center; }
+                }
+                .half-block-glow {
+                    animation: pulse-glow 4s infinite alternate ease-in-out;
+                }
+                @keyframes pulse-glow {
+                    0% { transform: scaleY(0.9); opacity: 0.7; }
+                    100% { transform: scaleY(1.1); opacity: 1; }
+                }
+                `}
+            </style>
 
-            {/* ТЛО: Нерівна лінія (Хребет Потоку) */}
-            <div className="position-absolute w-100 h-100 d-flex justify-content-center" style={{ top: 0, left: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-                <svg width="400" height="100%" viewBox="0 0 400 3000" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <motion.path d="M 200 0 C 400 500, 0 1000, 200 1500 C 400 2000, 0 2500, 200 3000" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="2" />
-                    <motion.path d="M 200 0 C 400 500, 0 1000, 200 1500 C 400 2000, 0 2500, 200 3000" stroke="url(#flowGradient)" strokeWidth="3" style={{ pathLength: smoothProgress }} />
-                    <defs>
-                        <linearGradient id="flowGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#e4e4e7" />
-                            <stop offset="100%" stopColor="#3f3f46" />
-                        </linearGradient>
-                    </defs>
-                </svg>
-            </div>
+            <svg style={{ position: 'absolute', width: 0, height: 0 }}>
+                <filter id="water-filter">
+                    <feTurbulence type="fractalNoise" baseFrequency="0.01 0.02" numOctaves="1" result="noise" seed={waterPhase} />
+                    <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G" />
+                </filter>
+            </svg>
 
-            {/* ГОЛОВНИЙ КОНТЕНТ */}
-            <div className="position-relative" style={{ zIndex: 1, filter: isGameOpen ? 'blur(10px)' : 'none', transition: 'filter 0.5s' }}>
+            {/* Анімація переходу (затемнення) при кліку на вхід */}
+            <AnimatePresence>
+                {isEntering && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }} className="position-fixed top-0 start-0 w-100 h-100 bg-black" style={{ zIndex: 100000 }} />
+                )}
+            </AnimatePresence>
+
+            <div className="position-fixed w-100 h-100" style={{ backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px)', backgroundSize: '40px 40px', zIndex: 0, pointerEvents: 'none' }}></div>
+
+            <div className="position-relative" style={{ zIndex: 1, filter: isEntering ? 'blur(10px)' : 'none', transition: 'filter 0.5s' }}>
                 
-                {/* HERO СЕКЦІЯ */}
+                {/* --- HERO СЕКЦІЯ (БЕЗ КНОПКИ ТЕРМІНАЛУ) --- */}
                 <div className="min-vh-100 d-flex flex-column align-items-center justify-content-center py-5 position-relative">
-                    
-                    {/* КНОПКА ВИКЛИКУ ПРИХОВАНОЇ ГРИ (ВЕРХНІЙ ПРАВИЙ КУТ) */}
-                    <motion.button 
-                        whileHover={{ scale: 1.1, color: '#10b981' }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => setIsGameOpen(true)}
-                        className="position-absolute btn btn-link"
-                        style={{ top: '30px', right: '30px', color: '#52525b', zIndex: 10 }}
-                        title="Initialize PyRun.exe"
-                    >
-                        <i className="fa-solid fa-terminal fs-4"></i>
-                    </motion.button>
+                    <div className="container text-center position-relative">
+                        <div className="position-absolute top-50 start-50 translate-middle rounded-circle" style={{ width: '500px', height: '500px', background: `radial-gradient(circle, ${COLORS.blue}15 0%, transparent 70%)`, filter: 'blur(60px)', zIndex: -1 }}></div>
 
-                    <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }} className="position-absolute rounded-circle" style={{ width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%)', filter: 'blur(40px)', zIndex: -1 }} />
-
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeOut" }}
-                        className="p-4 p-md-5 text-center"
-                        style={{ backgroundColor: 'rgba(15, 15, 17, 0.75)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', maxWidth: '440px', width: '90%', boxShadow: '0 30px 60px -15px rgba(0, 0, 0, 0.9)' }}
-                    >
-                        <h1 className="fw-bold mb-3 text-white" style={{ fontSize: '3rem', letterSpacing: '-1.5px' }}>SyFlow</h1>
-                        <p className="mb-4 mb-md-5" style={{ color: '#a1a1aa', fontSize: '1.1rem', lineHeight: '1.6' }}>
-                            Преображення вашого шляху в коді.<br/>
-                            Дисципліна та чистий потік.
-                        </p>
-                        <motion.a href="/accounts/google/login/" whileHover={{ scale: 1.02, backgroundColor: '#3f3f46' }} whileTap={{ scale: 0.95 }} className="btn w-100 py-3 fw-semibold text-white d-flex align-items-center justify-content-center" style={{ backgroundColor: '#27272a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '1.1rem', transition: 'all 0.3s' }}>
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" width="20" className="me-3" alt="Google" />
-                            Увійти через Google
+                        <motion.h1 
+                            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1 }} 
+                            className="river-text mb-4 fw-bold" 
+                            style={{ fontSize: '7rem', letterSpacing: '-4px', background: `linear-gradient(90deg, #fff, ${COLORS.blue}, #fff)` }}
+                        >
+                            SyFlow
+                        </motion.h1>
+                        
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="mx-auto mb-5" style={{ maxWidth: '650px' }}>
+                            <p style={{ color: '#a1a1aa', fontSize: '1.3rem', lineHeight: '1.6', fontWeight: 300 }}>
+                                Професійне середовище для розробників. Ми об'єднали машинну точність архітектури та бездоганну дисципліну коду в єдиний потік.
+                            </p>
+                        </motion.div>
+                        
+                        <motion.a 
+                            href="/accounts/google/login/" onClick={handleEntrance}
+                            whileHover={{ scale: 1.02, backgroundColor: '#fff', color: '#050505' }} whileTap={{ scale: 0.98 }} 
+                            className="btn py-3 px-5 fw-bold text-white d-inline-flex align-items-center justify-content-center" 
+                            style={{ backgroundColor: '#18181b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', transition: 'all 0.3s', fontSize: '1.1rem' }}
+                        >
+                            <i className="fa-brands fa-google me-3 fs-5"></i> Увійти до Системи
                         </motion.a>
-                    </motion.div>
-                </div>
-
-                {/* 2. Академія */}
-                <div className="min-vh-100 d-flex align-items-center py-5">
-                    <div className="container">
-                        <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-100px" }} className="row align-items-center p-4 p-lg-5" style={{ backgroundColor: 'rgba(20, 20, 23, 0.6)', backdropFilter: 'blur(15px)', borderRadius: '32px', border: '1px solid rgba(255,255,255,0.03)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
-                            <div className="col-lg-7 mb-5 mb-lg-0 pe-lg-5">
-                                <div className="d-inline-block px-3 py-1 mb-4" style={{ border: '1px solid #3f3f46', borderRadius: '20px', fontSize: '0.85rem', color: '#a1a1aa', letterSpacing: '1px' }}>01 / СТРУКТУРА</div>
-                                <h2 className="fw-bold mb-4 text-white" style={{ fontSize: '3.5rem', letterSpacing: '-1px' }}>Академія</h2>
-                                <p style={{ fontSize: '1.2rem', color: '#a1a1aa', lineHeight: '1.8' }}>Забудь про хаотичні туторіали. SyFlow пропонує структурований шлях від базового синтаксису до складної архітектури.</p>
-                            </div>
-                            <div className="col-lg-5 text-center">
-                                <motion.i whileHover={{ scale: 1.1, rotate: -5, color: '#fff', textShadow: '0 0 30px rgba(255,255,255,0.2)' }} className="fa-solid fa-book-journal-whills" style={{ fontSize: '12rem', color: '#27272a' }}></motion.i>
-                            </div>
-                        </motion.div>
                     </div>
                 </div>
 
-                {/* 3. Баланс (Скляний Моноліт) */}
-                <div className="min-vh-100 d-flex align-items-center py-5">
-                    <div className="container">
-                        <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-100px" }} className="row align-items-center p-4 p-lg-5 flex-column-reverse flex-lg-row" style={{ backgroundColor: 'rgba(20, 20, 23, 0.6)', backdropFilter: 'blur(15px)', borderRadius: '32px', border: '1px solid rgba(255,255,255,0.03)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
-                            <div className="col-lg-5 text-center mt-5 mt-lg-0">
-                                <motion.i whileHover={{ scale: 1.1, rotate: 5, color: '#fff', textShadow: '0 0 30px rgba(255,255,255,0.2)' }} transition={{ duration: 0.4 }} className="fa-solid fa-scale-balanced" style={{ fontSize: '12rem', color: '#27272a', cursor: 'pointer' }}></motion.i>
-                            </div>
-                            <div className="col-lg-7 ps-lg-5">
-                                <div className="d-inline-block px-3 py-1 mb-4" style={{ border: '1px solid #3f3f46', borderRadius: '20px', fontSize: '0.85rem', color: '#a1a1aa', letterSpacing: '1px' }}>02 / ЕФЕКТИВНІСТЬ</div>
-                                <h2 className="fw-bold mb-4 text-white" style={{ fontSize: '3.5rem', letterSpacing: '-1px' }}>Баланс</h2>
-                                <p style={{ fontSize: '1.2rem', color: '#a1a1aa', lineHeight: '1.8' }}>
-                                    Продуктивність — це не 16 годин за монітором. Це стан глибокого потоку. SyFlow відстежує твою активність, захищає від вигорання і змушує відпочивати, коли це стратегічно необхідно.
-                                </p>
-                            </div>
-                        </motion.div>
-                    </div>
-                </div>
+                {/* --- СТРУКТУРОВАНІ МОДУЛІ --- */}
+                <div className="container py-5" style={{ maxWidth: '1000px' }}>
+                    <StructuredModuleBlock 
+                        title="Академія" 
+                        color={COLORS.blue}
+                        iconClass="fa-solid fa-book-journal-whills"
+                        description="Чітка, структурована ієрархія знань. Від базового синтаксису до масштабованої архітектури додатків. Система відкидає хаос, надаючи інструменти для побудови глибокого розуміння коду. Навчання перетворюється на інженерний процес."
+                        widget={<TerminalWidget />}
+                    />
 
-                {/* 4. Система (Скляний Моноліт) */}
-                <div className="min-vh-100 d-flex align-items-center py-5">
-                    <div className="container">
-                        <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-100px" }} className="row align-items-center p-4 p-lg-5" style={{ backgroundColor: 'rgba(20, 20, 23, 0.6)', backdropFilter: 'blur(15px)', borderRadius: '32px', border: '1px solid rgba(255,255,255,0.03)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
-                            <div className="col-lg-7 mb-5 mb-lg-0 pe-lg-5">
-                                <div className="d-inline-block px-3 py-1 mb-4" style={{ border: '1px solid #3f3f46', borderRadius: '20px', fontSize: '0.85rem', color: '#a1a1aa', letterSpacing: '1px' }}>03 / ЕВОЛЮЦІЯ</div>
-                                <h2 className="fw-bold mb-4 text-white" style={{ fontSize: '3.5rem', letterSpacing: '-1px' }}>Система</h2>
-                                <p style={{ fontSize: '1.2rem', color: '#a1a1aa', lineHeight: '1.8' }}>
-                                    Глибока тіньова гейміфікація. Виконуй завдання, тримай стрік, заробляй ресурси. Твій профіль еволюціонує разом із твоїми навичками. Жодних дитячих бейджів — тільки суворий рейтинг майстерності.
-                                </p>
-                            </div>
-                            <div className="col-lg-5 text-center">
-                                <motion.i whileHover={{ scale: 1.1, y: -10, color: '#fff', textShadow: '0 0 30px rgba(255,255,255,0.2)' }} transition={{ duration: 0.4 }} className="fa-solid fa-layer-group" style={{ fontSize: '12rem', color: '#27272a', cursor: 'pointer' }}></motion.i>
-                            </div>
-                        </motion.div>
-                    </div>
+                    <StructuredModuleBlock 
+                        title="Баланс" 
+                        color={COLORS.purple}
+                        iconClass="fa-solid fa-scale-balanced"
+                        description="Алгоритмічний контроль продуктивності. Відстеження метрик активності допомагає запобігти перевантаженню. Система розуміє, коли необхідна концентрація, а коли — пауза для відновлення нейронних зв'язків. Ефективність через відпочинок."
+                        widget={<WaveWidget />}
+                    />
+
+                    <StructuredModuleBlock 
+                        title="Прогрес" 
+                        color={COLORS.green}
+                        iconClass="fa-solid fa-layer-group"
+                        description="Ваш особистий літопис розробника. Математична фіксація результатів та тіньова гейміфікація. Кожен закритий модуль оновлює глобальні змінні вашого профілю, еволюціонуючи ваші навички у реальному часі."
+                        widget={<ProgressWidget />}
+                    />
                 </div>
 
                 {/* ФУТЕР */}
-                <div className="py-5 text-center w-100" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', color: '#52525b' }}>
-                    <h5 className="fw-bold text-white mb-2" style={{ letterSpacing: '-0.5px', opacity: 0.8 }}>SyFlow</h5>
-                    <p className="mb-0" style={{ fontSize: '0.85rem' }}>The architecture of your mind. © 2026.</p>
+                <div className="py-5 text-center w-100" style={{ color: '#52525b', fontSize: '0.9rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                    <p className="mb-0">© 2026 SyFlow. Дисципліна. Точність. Потік.</p>
                 </div>
             </div>
-
-            {/* --- СЕКРЕТНИЙ ТЕРМІНАЛ: PyRun! --- */}
-            <AnimatePresence>
-                {isGameOpen && (
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
-                        className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-                        style={{ zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.8)' }}
-                    >
-                        <div className="p-4" style={{ backgroundColor: '#0c0c0e', border: '1px solid #3f3f46', borderRadius: '16px', fontFamily: 'monospace', width: '100%', maxWidth: '450px' }}>
-                            
-                            {/* Шапка терміналу */}
-                            <div className="d-flex justify-content-between align-items-center mb-3 pb-2" style={{ borderBottom: '1px solid #27272a' }}>
-                                <div className="text-success fw-bold"><i className="fa-solid fa-terminal me-2"></i>PyRun.exe</div>
-                                <button onClick={() => setIsGameOpen(false)} className="btn btn-sm btn-link text-danger p-0"><i className="fa-solid fa-xmark fs-5"></i></button>
-                            </div>
-
-                            {/* Рахунок */}
-                            <div className="d-flex justify-content-between mb-3" style={{ color: '#a1a1aa' }}>
-                                <span>Score: <span className="text-white fw-bold">{score}</span></span>
-                                <span>Status: {gameOver ? <span className="text-danger">CRASHED</span> : isPlaying ? <span className="text-success">RUNNING</span> : "IDLE"}</span>
-                            </div>
-
-                            {/* Ігрове поле (400x400) */}
-                            <div className="position-relative bg-black mx-auto" style={{ width: '100%', aspectRatio: '1/1', border: '1px solid #27272a', borderRadius: '8px', overflow: 'hidden' }}>
-                                
-                                {/* Їжа (Документація) */}
-                                <div className="position-absolute" style={{ width: `${100/GRID_SIZE}%`, height: `${100/GRID_SIZE}%`, left: `${(food.x/GRID_SIZE)*100}%`, top: `${(food.y/GRID_SIZE)*100}%`, backgroundColor: '#3b82f6', borderRadius: '2px', boxShadow: '0 0 10px #3b82f6' }}></div>
-
-                                {/* Перешкоди (Баги) */}
-                                {obstacles.map((obs, i) => (
-                                    <div key={i} className="position-absolute" style={{ width: `${100/GRID_SIZE}%`, height: `${100/GRID_SIZE}%`, left: `${(obs.x/GRID_SIZE)*100}%`, top: `${(obs.y/GRID_SIZE)*100}%`, backgroundColor: '#ef4444', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }}></div>
-                                ))}
-
-                                {/* Змійка (Python) */}
-                                {snake.map((seg, i) => (
-                                    <div key={i} className="position-absolute" style={{ 
-                                        width: `${100/GRID_SIZE}%`, height: `${100/GRID_SIZE}%`, 
-                                        left: `${(seg.x/GRID_SIZE)*100}%`, top: `${(seg.y/GRID_SIZE)*100}%`, 
-                                        backgroundColor: i === 0 ? '#10b981' : '#059669', // Голова світліша
-                                        border: '1px solid #000', borderRadius: i === 0 ? '4px' : '0' 
-                                    }}></div>
-                                ))}
-
-                                {/* Оверлей кінця гри */}
-                                {!isPlaying && (
-                                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-                                        {gameOver && <h3 className="text-danger fw-bold mb-3">SYSTEM CRASHED</h3>}
-                                        <button onClick={startGame} className="btn btn-outline-success font-monospace">
-                                            {gameOver ? "REBOOT SYSTEM" : "START SCRIPT"}
-                                        </button>
-                                        <div className="mt-3 text-secondary" style={{ fontSize: '0.8rem' }}>Use ARROW KEYS to move</div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     );
 };

@@ -1,25 +1,77 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <title>SyFlow | Get into the flow</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SyFlow | Серце Системи{% endblock %}</title>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; }
-        .flow-card { border-radius: 15px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        /* ГЛОБАЛЬНА ПАЛІТРА СИСТЕМИ (CSS Змінні) */
+        :root {
+            --color-bg: #050505;
+            --color-surface: #09090b;
+            --color-text-main: #e4e4e7;
+            --color-text-muted: #a1a1aa;
+            
+            --color-blue: #3b82f6;   /* Академія / Info */
+            --color-purple: #a855f7; /* Баланс / System */
+            --color-green: #10b981;  /* Прогрес / Success */
+            --color-pink: #ec4899;   /* Помилки / Alerts */
+        }
+
+        /* БАЗОВІ НАЛАШТУВАННЯ */
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            min-height: 100vh; 
+            background-color: var(--color-bg); 
+            color: var(--color-text-main);
+            font-family: system-ui, -apple-system, sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* ГЛОБАЛЬНИЙ ЕФЕКТ "ПОТІК РІЧКИ" (River Text) */
+        .river-text {
+            background-size: 200% auto !important;
+            color: transparent !important;
+            -webkit-background-clip: text !important;
+            animation: text-flow 6s linear infinite;
+            filter: url(#water-filter); /* Посилання на прихований SVG нижче */
+            display: inline-block;
+        }
+
+        @keyframes text-flow {
+            to { background-position: 200% center; }
+        }
+
+        /* Звичні скроллбари для системи */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--color-bg); }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+        
+        /* Блок для додаткових стилів кожної сторінки */
+        {% block extra_css %}{% endblock %}
     </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-6 text-center">
-                <h1 class="display-4">🌊 SyFlow</h1>
-                <p class="text-muted">Преображення вашого шляху в коді</p>
-                
-                {% block content %}
-                {% endblock %}
-            </div>
-        </div>
-    </div>
+    
+    <svg style="position: absolute; width: 0; height: 0; pointer-events: none;">
+        <filter id="water-filter">
+            <feTurbulence type="fractalNoise" baseFrequency="0.01 0.02" numOctaves="1" result="noise" seed="0">
+                <animate attributeName="seed" from="0" to="100" dur="10s" repeatCount="indefinite" />
+            </feTurbulence>
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+    </svg>
+
+    {% block content %}
+    {% endblock %}
+
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
