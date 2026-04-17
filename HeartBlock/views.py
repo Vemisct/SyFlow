@@ -24,3 +24,11 @@ def HomeVP(request):
 def GamesVP(request):
     """Сектор Симуляцій (Ігри/Тренажери)"""
     return render(request, 'GamesTP.html')
+
+@login_required
+def AcademyVP(request):
+    return render(request, 'AcademyTP.html')
+
+@login_required
+def MarketVP(request):
+    return render(request, 'MarketTP.html')
