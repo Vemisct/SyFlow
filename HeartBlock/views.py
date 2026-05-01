@@ -1,5 +1,11 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+from rest_framework import viewsets, permissions, filters, generics
+from rest_framework.decorators import api_view, permission_classes, parser_classes
+from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
+from django.core.files.storage import default_storage
+from .serializers import UserProfileBriefSerializer
 
 def WelcomeVP(request):
     """
@@ -20,15 +26,29 @@ def HomeVP(request):
     """Головний дашборд (Серце Системи)"""
     return render(request, 'HomeTP.html')
 
-@login_required
-def GamesVP(request):
-    """Сектор Симуляцій (Ігри/Тренажери)"""
-    return render(request, 'GamesTP.html')
+class CurrentUserAPI(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileBriefSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
-@login_required
-def AcademyVP(request):
-    return render(request, 'AcademyTP.html')
+    def get_object(self):
+        return self.request.user
 
-@login_required
-def MarketVP(request):
-    return render(request, 'MarketTP.html')
+class CurrentUserUpdate(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileBriefSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+    
+def SettingsVP(request):
+    return render(request, 'SettingsTP.html')
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])
+def upload_avatar(request):
+    file = request.FILES.get('avatar')
+    if not file:
+        return Response({'error': 'No file'}, status=400)
+    file_name = default_storage.save(f'avatars/{file.name}', file)
+    file_url = default_storage.url(file_name)
+    return Response({'url': request.build_absolute_uri(file_url)})

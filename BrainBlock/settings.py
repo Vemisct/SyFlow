@@ -15,6 +15,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'allauth',
+    'rest_framework',
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
@@ -22,8 +23,10 @@ INSTALLED_APPS = [
     'ExaminationBlock',
     'StudyBlock',
     'CommunityBlock',
-    'KitchenBlock',
+    'WorkshopBlock',
     'ActivityBlock',
+    'SettingsBlock',
+    'GuidBlock',
 ]
 
 MIDDLEWARE = [
@@ -107,3 +110,15 @@ ACCOUNT_AUTHENTICATION_METHOD = 'email'
 
 # Дозволяє прямий перехід до Google без потворної сторінки підтвердження
 SOCIALACCOUNT_LOGIN_ON_GET = True
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
+}
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

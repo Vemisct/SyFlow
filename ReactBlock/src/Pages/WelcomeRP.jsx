@@ -1,12 +1,13 @@
 // WelcomeRP.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const COLORS = {
   blue: '#3b82f6',
   purple: '#a855f7',
   green: '#10b981',
   pink: '#ec4899',
+  yellow: '#f59e0b',
   bg: '#050505',
   surface: '#09090b',
   border: 'rgba(255,255,255,0.05)'
@@ -34,7 +35,7 @@ const itemVariants = {
   }
 };
 
-// Компонент частинок фону
+// Частинки фону
 const Particles = () => {
   const canvasRef = useRef(null);
   useEffect(() => {
@@ -94,107 +95,17 @@ const Particles = () => {
   return <canvas ref={canvasRef} className="position-fixed top-0 start-0 w-100 h-100" style={{ pointerEvents: 'none', zIndex: 0 }} />;
 };
 
-// Віджет терміналу (покращений)
-const TerminalWidget = () => {
-  const [lines, setLines] = useState(['> Ініціалізація ядра...']);
-  useEffect(() => {
-    const cmds = [
-      '> Завантаження модулів: ОК',
-      '> Підключення до потоку...',
-      '> SYFLOW.ACADEMY: ONLINE'
-    ];
-    const interval = setInterval(() => {
-      setLines(prev => (prev.length >= 4 ? ['> Очікування команд...'] : [...prev, cmds[prev.length - 1]]));
-    }, 1800);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <motion.div variants={itemVariants} className="mt-4 p-4" style={{ backgroundColor: '#050505', borderRadius: '16px', border: `1px solid ${COLORS.blue}40`, fontFamily: 'monospace', fontSize: '0.9rem', color: COLORS.blue, minHeight: '140px' }}>
-      <div className="d-flex align-items-center mb-2 pb-2" style={{ borderBottom: `1px solid ${COLORS.blue}30` }}>
-        <i className="fa-solid fa-terminal me-2" /> SysLog
+// Картка відділу для лендингу
+const DepartmentCard = ({ title, description, icon, color, delay }) => (
+  <motion.div variants={itemVariants} custom={delay}
+    className="p-4 h-100" style={{ backgroundColor: COLORS.surface, border: `1px solid ${color}40`, borderRadius: '20px' }}>
+    <div className="d-flex align-items-center gap-3 mb-2">
+      <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <i className={icon} style={{ color, fontSize: '1.8rem' }} />
       </div>
-      {lines.map((line, i) => (
-        <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }} className="mb-1">
-          {line}
-        </motion.div>
-      ))}
-    </motion.div>
-  );
-};
-
-// Віджет хвилі (покращений)
-const WaveWidget = () => (
-  <motion.div variants={itemVariants} className="mt-4 p-4" style={{ backgroundColor: '#050505', borderRadius: '16px', border: `1px solid ${COLORS.purple}40`, height: '140px', position: 'relative', overflow: 'hidden' }}>
-    <div className="d-flex justify-content-between align-items-center mb-2 position-relative z-1">
-      <span style={{ fontSize: '0.85rem', color: COLORS.purple, textTransform: 'uppercase', letterSpacing: '1px' }}>
-        <i className="fa-solid fa-wave-square me-2" /> Ритм потоку
-      </span>
-      <span className="fw-bold text-white">42 Hz</span>
+      <h3 className="fw-bold text-white mb-0" style={{ fontSize: '1.5rem' }}>{title}</h3>
     </div>
-    <svg viewBox="0 0 500 100" className="w-100 position-absolute bottom-0 start-0" style={{ height: '80px', opacity: 0.8 }} preserveAspectRatio="none">
-      <motion.path d="M0,50 Q125,20 250,50 T500,50" fill="none" stroke={COLORS.purple} strokeWidth="3"
-        animate={{ d: ["M0,50 Q125,20 250,50 T500,50", "M0,50 Q125,80 250,50 T500,50", "M0,50 Q125,20 250,50 T500,50"] }}
-        transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-      />
-      <motion.path d="M0,50 Q125,80 250,50 T500,50" fill="none" stroke={COLORS.pink} strokeWidth="2" opacity="0.5"
-        animate={{ d: ["M0,50 Q125,80 250,50 T500,50", "M0,50 Q125,20 250,50 T500,50", "M0,50 Q125,80 250,50 T500,50"] }}
-        transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
-      />
-    </svg>
-  </motion.div>
-);
-
-// Прогрес віджет
-const ProgressWidget = () => {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    let start = 0; const end = 2048; const duration = 2500; const increment = end / (duration / 16);
-    const timer = setInterval(() => {
-      start += increment;
-      if (start >= end) { setCount(end); clearInterval(timer); }
-      else { setCount(Math.floor(start)); }
-    }, 16);
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <motion.div variants={itemVariants} className="mt-4 p-4 d-flex flex-column justify-content-center" style={{ backgroundColor: '#050505', borderRadius: '16px', border: `1px solid ${COLORS.green}40`, height: '140px' }}>
-      <div className="d-flex align-items-center mb-2">
-        <i className="fa-solid fa-arrow-trend-up me-2" style={{ color: COLORS.green }} />
-        <span style={{ fontSize: '0.85rem', color: COLORS.green, textTransform: 'uppercase', letterSpacing: '1px' }}>Еволюційний індекс</span>
-      </div>
-      <div className="d-flex align-items-baseline">
-        <span className="fw-bold text-white" style={{ fontSize: '2.5rem', fontFamily: 'monospace' }}>{count}</span>
-        <span className="ms-2 text-secondary" style={{ fontSize: '1rem' }}>EXP</span>
-      </div>
-      <div className="w-100 mt-2" style={{ height: '4px', backgroundColor: '#18181b', borderRadius: '2px', overflow: 'hidden' }}>
-        <motion.div initial={{ width: 0 }} animate={{ width: '75%' }} transition={{ duration: 2, delay: 0.5 }} style={{ height: '100%', backgroundColor: COLORS.green, boxShadow: `0 0 10px ${COLORS.green}` }} />
-      </div>
-    </motion.div>
-  );
-};
-
-// Структурований блок
-const StructuredModuleBlock = ({ title, description, iconClass, color, widget }) => (
-  <motion.div variants={itemVariants} className="position-relative w-100 mb-5" style={{ backgroundColor: '#09090b', borderRadius: '24px', border: `1px solid ${COLORS.border}`, overflow: 'hidden' }}>
-    <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '55%', background: `linear-gradient(to top, ${color}33, transparent)`, filter: 'blur(40px)', zIndex: 0, pointerEvents: 'none' }} />
-    <div className="position-relative z-1 p-4 p-md-5 d-flex justify-content-between align-items-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-      <h2 className="river-text m-0 fw-bold" style={{ fontSize: '3.5rem', background: `linear-gradient(90deg, #fff, ${color}, #fff)`, backgroundClip: 'text', WebkitBackgroundClip: 'text', color: 'transparent' }}>
-        {title}
-      </h2>
-      <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${color}40` }}>
-        <i className={iconClass} style={{ fontSize: '2.5rem', color: color, filter: `drop-shadow(0 0 10px ${color}80)` }} />
-      </div>
-    </div>
-    <div className="position-relative z-1 p-4 p-md-5 row align-items-start">
-      <div className="col-lg-7 mb-4 mb-lg-0 pe-lg-5">
-        <p style={{ fontSize: '1.25rem', color: '#a1a1aa', lineHeight: '1.7', fontWeight: 300, margin: 0 }}>{description}</p>
-      </div>
-      <div className="col-lg-5">
-        {widget}
-      </div>
-    </div>
+    <p className="text-secondary mt-2" style={{ fontSize: '0.95rem', lineHeight: '1.5' }}>{description}</p>
   </motion.div>
 );
 
@@ -206,6 +117,14 @@ const WelcomeRP = () => {
     setIsEntering(true);
     setTimeout(() => { window.location.href = "/accounts/google/login/"; }, 800);
   };
+
+  const departments = [
+    { title: 'Академія', description: 'Навчальні модулі від синтаксису до архітектури.', icon: 'fa-solid fa-book-journal-whills', color: COLORS.blue },
+    { title: 'Майстерня', description: 'Спільні проекти та код-рев’ю.', icon: 'fa-solid fa-hammer', color: COLORS.purple },
+    { title: 'Маркет', description: 'Внутрішня економіка: скіни, бустери, інструменти.', icon: 'fa-solid fa-store', color: COLORS.yellow },
+    { title: 'Полігон', description: 'Тренажери, змагання, перевірка навичок.', icon: 'fa-solid fa-gamepad', color: COLORS.pink },
+    { title: 'Баланс', description: 'Контроль ритму, відпочинок та здоровий flow.', icon: 'fa-solid fa-scale-balanced', color: COLORS.green },
+  ];
 
   return (
     <div className="w-100 position-relative min-vh-100" style={{ backgroundColor: COLORS.bg, color: '#e4e4e7', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
@@ -228,7 +147,7 @@ const WelcomeRP = () => {
 
             <motion.div variants={itemVariants} className="mx-auto mb-5" style={{ maxWidth: '650px' }}>
               <p style={{ color: '#a1a1aa', fontSize: '1.3rem', lineHeight: '1.6', fontWeight: 300 }}>
-                Професійне середовище для розробників. Ми об'єднали машинну точність архітектури та бездоганну дисципліну коду в єдиний потік.
+                Організація для тих, хто будує цифрові світи. Навчання, співпраця, економіка — всі відділи в одному потоці.
               </p>
             </motion.div>
 
@@ -243,24 +162,20 @@ const WelcomeRP = () => {
           </motion.div>
         </div>
 
-        {/* Модулі */}
-        <motion.div variants={containerVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} className="container py-5" style={{ maxWidth: '1000px' }}>
-          <StructuredModuleBlock title="Академія" color={COLORS.blue} iconClass="fa-solid fa-book-journal-whills"
-            description="Чітка, структурована ієрархія знань. Від базового синтаксису до масштабованої архітектури додатків. Система відкидає хаос, надаючи інструменти для побудови глибокого розуміння коду. Навчання перетворюється на інженерний процес."
-            widget={<TerminalWidget />}
-          />
-          <StructuredModuleBlock title="Баланс" color={COLORS.purple} iconClass="fa-solid fa-scale-balanced"
-            description="Алгоритмічний контроль продуктивності. Відстеження метрик активності допомагає запобігти перевантаженню. Система розуміє, коли необхідна концентрація, а коли — пауза для відновлення нейронних зв'язків. Ефективність через відпочинок."
-            widget={<WaveWidget />}
-          />
-          <StructuredModuleBlock title="Прогрес" color={COLORS.green} iconClass="fa-solid fa-layer-group"
-            description="Ваш особистий літопис розробника. Математична фіксація результатів та тіньова гейміфікація. Кожен закритий модуль оновлює глобальні змінні вашого профілю, еволюціонуючи ваші навички у реальному часі."
-            widget={<ProgressWidget />}
-          />
+        {/* Відділи */}
+        <motion.div variants={containerVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} className="container py-5" style={{ maxWidth: '1100px' }}>
+          <h2 className="text-white text-center mb-5 fw-bold" style={{ fontSize: '2.5rem' }}>Наші відділи</h2>
+          <div className="row g-4">
+            {departments.map((dept, idx) => (
+              <div className="col-md-6 col-lg-4" key={idx}>
+                <DepartmentCard {...dept} delay={idx * 0.1} />
+              </div>
+            ))}
+          </div>
         </motion.div>
 
         <div className="py-5 text-center w-100" style={{ color: '#52525b', fontSize: '0.9rem', borderTop: `1px solid ${COLORS.border}` }}>
-          <p className="mb-0">© 2026 SyFlow. Дисципліна. Точність. Потік.</p>
+          <p className="mb-0">© 2026 SyFlow. Організація розробників.</p>
         </div>
       </div>
     </div>

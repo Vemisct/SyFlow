@@ -1,0 +1,1 @@
+import{c as e}from"./es-kFX2ycqZ.js";function t(){let e=JSON.parse(localStorage.getItem(`syflow_settings`)||`{}`);e.theme&&document.body.classList.toggle(`light-theme`,e.theme===`light`),e.font_family&&(document.body.style.fontFamily=e.font_family),e.language&&localStorage.setItem(`syflow_lang`,e.language)}var n=e((()=>{}));export{n,t};

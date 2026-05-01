@@ -5,7 +5,7 @@ urlpatterns = [
     path('', WelcomeVP, name='WelcomeUP'),
     path('entrance/', EntranceVP, name='EntranceUP'),
     path('dashboard/', HomeVP, name='HomeUP'),
-    path('simulations/', GamesVP, name='GamesUP'),
-    path('academy/', AcademyVP, name='AcademyUP'),
-    path('market/', MarketVP, name='MarketUP'),
+    path('settings/', SettingsVP, name='SettingsUP'),
+    path('api/user/', CurrentUserAPI.as_view(), name='current-user'),
+    path('api/user/update/', CurrentUserUpdate.as_view(), name='user-update'),
 ]
