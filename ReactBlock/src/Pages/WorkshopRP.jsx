@@ -323,97 +323,95 @@ const StatItem = ({ title, value, icon }) => (
   </div>
 );
 
-// ========== РЕДАКТОР КОДУ ==========
-const CodeEditor = ({ value, onChange, language = 'python' }) => {
-  const editorRef = useRef(null);
-  const viewRef = useRef(null);
-
-  useEffect(() => {
-    if (!editorRef.current) return;
-
-    const extensions = [
-      lineNumbers(),
-      highlightActiveLine(),
-      keymap.of(defaultKeymap),
-      oneDark,
-      EditorView.updateListener.of((update) => {
-        if (update.docChanged && onChange) {
-          onChange(update.state.doc.toString());
-        }
-      }),
-    ];
-
-    if (language === 'python') extensions.push(python());
-    else if (language === 'javascript') extensions.push(javascript());
-
-    const state = EditorState.create({
-      doc: value || '',
-      extensions,
-    });
-
-    const view = new EditorView({
-      state,
-      parent: editorRef.current,
-    });
-    viewRef.current = view;
-
-    return () => view.destroy();
-  }, []);
-
-  useEffect(() => {
-    if (viewRef.current && value !== undefined) {
-      const currentContent = viewRef.current.state.doc.toString();
-      if (value !== currentContent) {
-        viewRef.current.dispatch({
-          changes: { from: 0, to: currentContent.length, insert: value || '' },
-        });
-      }
-    }
-  }, [value]);
-
-  return <div ref={editorRef} style={{ height: '100%', width: '100%', borderRadius: '12px', overflow: 'hidden', border: `1px solid ${COLORS.border}` }} />;
-};
-
-// ========== РЕДАКТОР ФАЙЛІВ ==========
+// ========== НОВИЙ FileEditorPage (контейнер із вкладками) ==========
 const FileEditorPage = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const [project, setProject] = useState(null);
+  const [error, setError] = useState(null);
+  const [activeInnerTab, setActiveInnerTab] = useState('workspace'); // 'workspace' | 'run' | 'terminal'
+
+  useEffect(() => {
+    fetch(`${API_URL}${projectId}/`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { setProject(data); })
+      .catch(err => { setError('Проєкт не знайдено'); console.error(err); });
+  }, [projectId]);
+
+  if (error) return <ErrorMessage message={error} />;
+  if (!project) return <LoadingSpinner />;
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}
+      style={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
+      {/* Хедер */}
+      <div className="d-flex align-items-center mb-3">
+        <button onClick={() => navigate('/')} className="btn btn-sm text-secondary me-3">
+          <i className="fa-solid fa-arrow-left me-1" /> Назад
+        </button>
+        <h2 className="text-white fw-bold m-0" style={{ fontSize: '1.6rem' }}>{project.title}</h2>
+        <span className="ms-3 text-secondary font-monospace" style={{ fontSize: '0.8rem' }}>ID: {projectId}</span>
+      </div>
+
+      {/* Перемикач вкладок */}
+      <div className="d-flex gap-2 mb-3">
+        {[
+          { key: 'workspace', label: 'Робоча поверхня', icon: 'fa-solid fa-code' },
+          { key: 'run', label: 'Запуск', icon: 'fa-solid fa-play' },
+          { key: 'terminal', label: 'Термінал', icon: 'fa-solid fa-terminal' },
+        ].map(tab => (
+          <motion.button
+            key={tab.key}
+            onClick={() => setActiveInnerTab(tab.key)}
+            whileHover={{ backgroundColor: 'rgba(168,85,247,0.1)' }}
+            whileTap={{ scale: 0.97 }}
+            className="btn d-flex align-items-center gap-2 px-3 py-2 rounded-3 border-0"
+            style={{
+              backgroundColor: activeInnerTab === tab.key ? 'rgba(168,85,247,0.15)' : 'transparent',
+              color: activeInnerTab === tab.key ? '#fff' : '#a1a1aa',
+              border: activeInnerTab === tab.key ? `1px solid ${COLORS.purple}40` : '1px solid transparent',
+              transition: 'all 0.2s',
+            }}
+          >
+            <i className={tab.icon} style={{ fontSize: '0.9rem' }} />
+            {tab.label}
+          </motion.button>
+        ))}
+      </div>
+
+      {/* Вміст вкладок */}
+      <div className="flex-grow-1" style={{ overflow: 'hidden' }}>
+        <AnimatePresence mode="wait">
+          <motion.div key={activeInnerTab} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} style={{ height: '100%' }}>
+            {activeInnerTab === 'workspace' && <WorkspaceTab projectId={projectId} />}
+            {activeInnerTab === 'run' && <RunTab projectId={projectId} />}
+            {activeInnerTab === 'terminal' && <TerminalTab projectId={projectId} />}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+};
+
+// ========== ВКЛАДКА «РОБОЧА ПОВЕРХНЯ» (попередній файловий редактор) ==========
+const WorkspaceTab = ({ projectId }) => {
   const [files, setFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [content, setContent] = useState('');
   const [isDirty, setIsDirty] = useState(false);
-  const [project, setProject] = useState(null);
   const [newFileName, setNewFileName] = useState('');
   const [error, setError] = useState(null);
-
   const API_FILES = `${API_FILES_BASE}${projectId}/files/`;
 
-  const loadData = useCallback(async () => {
+  const loadFiles = useCallback(async () => {
     try {
-      const projRes = await fetch(`${API_URL}${projectId}/`);
-      if (projRes.ok) {
-        const projData = await projRes.json();
-        setProject(projData);
-      } else {
-        setError('Проєкт не знайдено');
-      }
+      const res = await fetch(API_FILES);
+      if (res.ok) setFiles(await res.json());
+      else setError('Не вдалося завантажити файли');
+    } catch (err) { console.error(err); setError('Помилка мережі'); }
+  }, [API_FILES]);
 
-      const filesRes = await fetch(API_FILES);
-      if (filesRes.ok) {
-        const filesData = await filesRes.json();
-        setFiles(Array.isArray(filesData) ? filesData : []);
-      } else {
-        setError('Не вдалося завантажити файли');
-      }
-    } catch (err) {
-      console.error(err);
-      setError('Помилка мережі');
-    }
-  }, [projectId, API_FILES]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useEffect(() => { loadFiles(); }, [loadFiles]);
 
   const saveFile = async () => {
     if (!selectedFile) return;
@@ -421,22 +419,14 @@ const FileEditorPage = () => {
     try {
       const res = await fetch(`${API_FILES}${selectedFile.id}/`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken,
-        },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
         body: JSON.stringify({ name: selectedFile.name, content }),
       });
       if (res.ok) {
         setIsDirty(false);
         setFiles(prev => prev.map(f => f.id === selectedFile.id ? { ...f, content } : f));
-      } else {
-        alert('Помилка збереження');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Помилка мережі');
-    }
+      } else alert('Помилка збереження');
+    } catch (err) { console.error(err); alert('Помилка мережі'); }
   };
 
   const createFile = async () => {
@@ -445,10 +435,7 @@ const FileEditorPage = () => {
     try {
       const res = await fetch(API_FILES, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken,
-        },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
         body: JSON.stringify({ name: newFileName, content: '' }),
       });
       if (res.ok) {
@@ -461,153 +448,295 @@ const FileEditorPage = () => {
         const errData = await res.json().catch(() => ({}));
         alert(errData?.detail || 'Не вдалося створити файл');
       }
-    } catch (err) {
-      console.error(err);
-      alert('Помилка мережі');
-    }
+    } catch (err) { console.error(err); alert('Помилка мережі'); }
   };
 
   const deleteFile = async (id) => {
     if (!confirm('Видалити файл?')) return;
     const csrfToken = getCookie('csrftoken');
     try {
-      const res = await fetch(`${API_FILES}${id}/`, {
-        method: 'DELETE',
-        headers: { 'X-CSRFToken': csrfToken },
-      });
-      if (res.ok) {
-        setFiles(prev => prev.filter(f => f.id !== id));
-        if (selectedFile?.id === id) {
-          setSelectedFile(null);
-          setContent('');
-        }
-      }
-    } catch (err) {
-      console.error(err);
-    }
+      await fetch(`${API_FILES}${id}/`, { method: 'DELETE', headers: { 'X-CSRFToken': csrfToken } });
+      setFiles(prev => prev.filter(f => f.id !== id));
+      if (selectedFile?.id === id) { setSelectedFile(null); setContent(''); }
+    } catch (err) { console.error(err); }
   };
 
   useEffect(() => {
-    if (selectedFile) {
-      setContent(selectedFile.content);
-      setIsDirty(false);
-    } else {
-      setContent('');
-    }
+    if (selectedFile) { setContent(selectedFile.content); setIsDirty(false); }
+    else setContent('');
   }, [selectedFile]);
 
-  const handleContentChange = (newContent) => {
-    setContent(newContent);
-    setIsDirty(true);
+  const getLanguage = (fileName) => {
+    if (fileName.endsWith('.py')) return 'python';
+    if (fileName.endsWith('.js') || fileName.endsWith('.jsx')) return 'javascript';
+    if (fileName.endsWith('.html')) return 'html';
+    if (fileName.endsWith('.css')) return 'css';
+    if (fileName.endsWith('.json')) return 'json';
+    return 'python'; // default
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} style={{ height: 'calc(100vh - 120px)' }}>
-      {error && <ErrorMessage message={error} />}
-      <div className="d-flex align-items-center mb-4">
-        <button onClick={() => navigate('/')} className="btn btn-sm text-secondary me-3">
-          <i className="fa-solid fa-arrow-left me-1" /> Назад
-        </button>
-        <h2 className="text-white fw-bold m-0" style={{ fontSize: '1.8rem' }}>
-          {project?.title || 'Редактор'}
-        </h2>
-      </div>
+    <div className="d-flex gap-3 h-100">
+      {/* Панель файлів */}
+      <motion.div initial={{ x: -20 }} animate={{ x: 0 }}
+        className="d-flex flex-column" style={{ width: '250px', backgroundColor: COLORS.glass, backdropFilter: 'blur(16px)', border: `1px solid ${COLORS.border}`, borderRadius: '16px', padding: '1rem' }}>
+        <h5 className="text-secondary mb-3">Файли проєкту</h5>
+        <div className="d-flex gap-2 mb-3">
+          <input value={newFileName} onChange={(e) => setNewFileName(e.target.value)} placeholder="новий файл..."
+            className="form-control bg-dark text-white border-secondary" style={{ fontSize: '0.9rem' }} />
+          <button onClick={createFile} className="btn btn-sm text-white" style={{ backgroundColor: COLORS.purple }}>
+            <i className="fa-solid fa-plus" />
+          </button>
+        </div>
+        <div className="flex-grow-1 overflow-auto">
+          {files.map(file => (
+            <motion.div key={file.id} whileHover={{ backgroundColor: 'rgba(168,85,247,0.1)' }}
+              onClick={() => setSelectedFile(file)}
+              className="d-flex justify-content-between align-items-center p-2 rounded-3"
+              style={{ cursor: 'pointer', backgroundColor: selectedFile?.id === file.id ? 'rgba(168,85,247,0.2)' : 'transparent', marginBottom: '4px' }}>
+              <span className="text-white" style={{ fontSize: '0.95rem' }}>
+                <i className="fa-regular fa-file-code me-2" style={{ color: COLORS.purple }} />{file.name}
+              </span>
+              <button onClick={(e) => { e.stopPropagation(); deleteFile(file.id); }} className="btn btn-sm p-0 text-secondary">
+                <i className="fa-solid fa-trash-can" />
+              </button>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
 
-      <div className="d-flex gap-3" style={{ height: '100%' }}>
-        <motion.div
-          initial={{ x: -20, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          className="d-flex flex-column"
-          style={{
-            width: '250px',
-            backgroundColor: COLORS.glass,
-            backdropFilter: 'blur(16px)',
-            border: `1px solid ${COLORS.border}`,
-            borderRadius: '16px',
-            padding: '1rem',
-          }}
-        >
-          <h5 className="text-secondary mb-3">Файли проєкту</h5>
-          <div className="d-flex gap-2 mb-3">
-            <input
-              value={newFileName}
-              onChange={(e) => setNewFileName(e.target.value)}
-              placeholder="новий файл..."
-              className="form-control bg-dark text-white border-secondary"
-              style={{ fontSize: '0.9rem' }}
-            />
-            <button onClick={createFile} className="btn btn-sm text-white" style={{ backgroundColor: COLORS.purple }}>
-              <i className="fa-solid fa-plus" />
-            </button>
-          </div>
-
-          <div className="flex-grow-1 overflow-auto">
-            {files.map(file => (
-              <motion.div
-                key={file.id}
-                whileHover={{ backgroundColor: 'rgba(168,85,247,0.1)' }}
-                onClick={() => setSelectedFile(file)}
-                className="d-flex justify-content-between align-items-center p-2 rounded-3"
-                style={{
-                  cursor: 'pointer',
-                  backgroundColor: selectedFile?.id === file.id ? 'rgba(168,85,247,0.2)' : 'transparent',
-                  marginBottom: '4px',
-                }}
-              >
-                <span className="text-white" style={{ fontSize: '0.95rem' }}>
-                  <i className="fa-regular fa-file-code me-2" style={{ color: COLORS.purple }} />
-                  {file.name}
-                </span>
-                <button
-                  onClick={(e) => { e.stopPropagation(); deleteFile(file.id); }}
-                  className="btn btn-sm p-0 text-secondary"
-                >
-                  <i className="fa-solid fa-trash-can" />
-                </button>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex-grow-1 position-relative"
-          style={{
-            backgroundColor: COLORS.glass,
-            backdropFilter: 'blur(16px)',
-            border: `1px solid ${COLORS.border}`,
-            borderRadius: '16px',
-            overflow: 'hidden',
-          }}
-        >
-          {selectedFile ? (
-            <>
-              <div className="d-flex justify-content-between align-items-center px-3 py-2" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-                <span className="text-white fw-semibold">{selectedFile.name}</span>
-                {isDirty && (
-                  <button onClick={saveFile} className="btn btn-sm text-white" style={{ backgroundColor: COLORS.green }}>
-                    <i className="fa-solid fa-save me-1" /> Зберегти
-                  </button>
-                )}
-              </div>
-              <div style={{ height: 'calc(100% - 45px)' }}>
-                <CodeEditor
-                  value={content}
-                  onChange={handleContentChange}
-                  language={selectedFile.name.endsWith('.py') ? 'python' : 'javascript'}
-                />
-              </div>
-            </>
-          ) : (
-            <div className="d-flex align-items-center justify-content-center h-100 text-secondary">
-              Оберіть файл для редагування
+      {/* Редактор коду */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-grow-1 position-relative"
+        style={{ backgroundColor: COLORS.glass, backdropFilter: 'blur(16px)', border: `1px solid ${COLORS.border}`, borderRadius: '16px', overflow: 'hidden' }}>
+        {selectedFile ? (
+          <>
+            <div className="d-flex justify-content-between align-items-center px-3 py-2" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+              <span className="text-white fw-semibold">{selectedFile.name}</span>
+              {isDirty && <button onClick={saveFile} className="btn btn-sm text-white" style={{ backgroundColor: COLORS.green }}><i className="fa-solid fa-save me-1" /> Зберегти</button>}
             </div>
-          )}
-        </motion.div>
+            <div style={{ height: 'calc(100% - 45px)' }}>
+              <CodeEditor value={content} onChange={(newContent) => { setContent(newContent); setIsDirty(true); }} language={getLanguage(selectedFile.name)} />
+            </div>
+          </>
+        ) : (
+          <div className="d-flex align-items-center justify-content-center h-100 text-secondary">Оберіть файл для редагування</div>
+        )}
+      </motion.div>
+    </div>
+  );
+};
+
+const RunTab = ({ projectId }) => {
+  const [files, setFiles] = useState([]);
+  const [config, setConfig] = useState({
+    main_file: '',
+    arguments: '',
+    python_version: '3',
+    language: 'python',
+  });
+  const [output, setOutput] = useState(null);
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetch(`${API_FILES_BASE}${projectId}/files/`)
+      .then(res => res.json())
+      .then(setFiles)
+      .catch(console.error);
+
+    fetch(`${API_FILES_BASE}${projectId}/run-config/`)
+      .then(res => res.json())
+      .then(data => setConfig(prev => ({ ...prev, ...data })))
+      .catch(console.error);
+  }, [projectId]);
+
+  const saveConfig = async () => {
+    const csrfToken = getCookie('csrftoken');
+    try {
+      const res = await fetch(`${API_FILES_BASE}${projectId}/run-config/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify(config),
+      });
+      if (res.ok) alert('Налаштування збережено!');
+      else alert('Помилка збереження');
+    } catch (err) { console.error(err); alert('Помилка мережі'); }
+  };
+
+  const runProject = async () => {
+    setRunning(true);
+    setError(null);
+    setOutput(null);
+    const csrfToken = getCookie('csrftoken');
+    try {
+      const res = await fetch(`${API_FILES_BASE}${projectId}/run/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setOutput(data);
+      } else {
+        setError(data.error || 'Помилка запуску');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Помилка мережі');
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  // Обробка кольорових повідомлень з stderr
+  const renderStderr = (stderr) => {
+    if (!stderr) return null;
+    const lines = stderr.split('\n');
+    return lines.map((line, idx) => {
+      let color = 'white';
+      if (line.includes('FP-ERROR')) color = '#991b1b'; // темно-червоний
+      else if (line.includes('FP-WARNING')) color = '#a16207'; // темно-жовтий
+      else if (line.includes('FP-INFO')) color = '#1e3a8a'; // темно-синій
+      return <div key={idx} style={{ color }}>{line}</div>;
+    });
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+      className="d-flex flex-column h-100 gap-3 p-3" style={{ backgroundColor: COLORS.glass, backdropFilter: 'blur(16px)', border: `1px solid ${COLORS.border}`, borderRadius: '16px' }}>
+      <div className="d-flex align-items-center gap-3">
+        <h3 className="text-white fw-bold m-0"><i className="fa-solid fa-sliders me-2" style={{ color: COLORS.purple }} />Запуск проєкту</h3>
+        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={saveConfig}
+          className="btn btn-sm text-white" style={{ backgroundColor: COLORS.blue, borderRadius: '12px' }}>
+          <i className="fa-solid fa-floppy-disk me-2" />Зберегти налаштування
+        </motion.button>
       </div>
+
+      <div className="row g-3">
+        <div className="col-md-3">
+          <label className="text-secondary mb-1">Мова</label>
+          <select className="form-control bg-dark text-white border-secondary" value={config.language}
+            onChange={e => setConfig(prev => ({ ...prev, language: e.target.value }))}>
+            <option value="python">Python</option>
+            <option value="flowperl">FlowPerl</option>
+          </select>
+        </div>
+        <div className="col-md-3">
+          <label className="text-secondary mb-1">Головний файл</label>
+          <select className="form-control bg-dark text-white border-secondary" value={config.main_file}
+            onChange={e => setConfig(prev => ({ ...prev, main_file: e.target.value }))}>
+            <option value="">— Авто —</option>
+            {files.filter(f => config.language === 'flowperl' ? f.name.endsWith('.fp') : f.name.endsWith('.py')).map(f => (
+              <option key={f.id} value={f.name}>{f.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="col-md-3">
+          <label className="text-secondary mb-1">Аргументи</label>
+          <input className="form-control bg-dark text-white border-secondary" value={config.arguments}
+            onChange={e => setConfig(prev => ({ ...prev, arguments: e.target.value }))} placeholder="--verbose" />
+        </div>
+        <div className="col-md-3">
+          <label className="text-secondary mb-1">Версія Python</label>
+          <select className="form-control bg-dark text-white border-secondary" value={config.python_version}
+            onChange={e => setConfig(prev => ({ ...prev, python_version: e.target.value }))}>
+            <option value="3">Python 3</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={runProject} disabled={running}
+          className="btn px-4 py-2 text-white fw-bold" style={{ backgroundColor: COLORS.green, borderRadius: '12px' }}>
+          {running ? (
+            <><motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.8 }} style={{ width: '18px', height: '18px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', marginRight: '8px' }} /> Запуск...</>
+          ) : (
+            <><i className="fa-solid fa-play me-2" /> Запустити</>
+          )}
+        </motion.button>
+      </div>
+
+      {(output || error) && (
+        <div className="flex-grow-1 mt-3 p-3 rounded-3" style={{ backgroundColor: '#0d0d0d', border: `1px solid ${COLORS.border}`, fontFamily: 'monospace', fontSize: '0.9rem', overflowY: 'auto', maxHeight: '400px' }}>
+          {error && <div className="text-danger mb-2">❌ {error}</div>}
+          {output && (
+            <>
+              {output.stdout && (
+                <div className="mb-2">
+                  <div className="text-success mb-1">📤 stdout:</div>
+                  <pre className="text-white" style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{output.stdout}</pre>
+                </div>
+              )}
+              {output.stderr ? (
+                <div>
+                  <div className="text-warning mb-1">⚠️ stderr:</div>
+                  <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{renderStderr(output.stderr)}</pre>
+                </div>
+              ) : (
+                !output.stdout && <div className="text-secondary">Код виконано без виводу.</div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </motion.div>
   );
+};
+
+const TerminalTab = ({ projectId }) => (
+  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="p-5 text-center rounded-4" style={{ backgroundColor: COLORS.glass, backdropFilter: 'blur(12px)', border: `1px solid ${COLORS.border}`, height: '100%' }}>
+    <i className="fa-solid fa-terminal mb-3" style={{ fontSize: '3rem', color: COLORS.purple, opacity: 0.5 }} />
+    <h3 className="text-white fw-bold">Термінал</h3>
+    <p className="text-secondary">Тут відображатимуться результати запуску та системні повідомлення.</p>
+  </motion.div>
+);
+
+// ========== ОНОВЛЕНИЙ CodeEditor (додаємо підтримку нових мов) ==========
+const CodeEditor = ({ value, onChange, language = 'python' }) => {
+  const editorRef = useRef(null);
+  const viewRef = useRef(null);
+
+  useEffect(() => {
+    if (!editorRef.current) return;
+
+    const getLanguageExtension = (lang) => {
+      switch (lang) {
+        case 'python': return python();
+        case 'javascript': return javascript();
+        case 'html': return html();
+        case 'css': return css();
+        case 'json': return json();
+        default: return python();
+      }
+    };
+
+    const extensions = [
+      lineNumbers(),
+      highlightActiveLine(),
+      keymap.of(defaultKeymap),
+      oneDark,
+      getLanguageExtension(language),
+      EditorView.updateListener.of((update) => {
+        if (update.docChanged && onChange) {
+          onChange(update.state.doc.toString());
+        }
+      }),
+    ];
+
+    const state = EditorState.create({ doc: value || '', extensions });
+    const view = new EditorView({ state, parent: editorRef.current });
+    viewRef.current = view;
+
+    return () => view.destroy();
+  }, []);
+
+  useEffect(() => {
+    if (viewRef.current && value !== undefined) {
+      const cur = viewRef.current.state.doc.toString();
+      if (value !== cur) viewRef.current.dispatch({ changes: { from: 0, to: cur.length, insert: value || '' } });
+    }
+  }, [value]);
+
+  return <div ref={editorRef} style={{ height: '100%', width: '100%', borderRadius: '12px', overflow: 'hidden', border: `1px solid ${COLORS.border}` }} />;
 };
 
 // ========== ВИБІР РЕДАКТОРА ==========

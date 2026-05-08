@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import WorkshopVP, ProjectViewSet, ProjectFileViewSet
+from .views import *
 
 router = DefaultRouter()
 router.register(r'projects', ProjectViewSet)
@@ -19,4 +19,6 @@ urlpatterns = [
         'patch': 'partial_update',
         'delete': 'destroy'
     }), name='project-files-detail'),
+    path('api/projects/<int:project_pk>/run-config/', RunConfigView.as_view(), name='run-config'),
+    path('api/projects/<int:project_pk>/run/', run_project, name='run-project'),
 ]

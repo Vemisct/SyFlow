@@ -34,3 +34,8 @@ class ProjectFileSerializer(serializers.ModelSerializer):
         project_id = self.context['view'].kwargs.get('project_pk')
         validated_data['project_id'] = project_id
         return super().create(validated_data)
+    
+class ProjectRunConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectRunConfig
+        fields = ['main_file', 'arguments', 'python_version']

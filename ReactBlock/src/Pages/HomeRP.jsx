@@ -15,42 +15,37 @@ const COLORS = {
 };
 
 // ==================== АНІМАЦІЯ ПЕРЕХОДУ ====================
-const BlockTransition = ({ isActive, targetLink, onComplete }) => {
+const BlockTransition = ({ isActive }) => {
+  if (!isActive) return null;
   return (
-    <AnimatePresence onExitComplete={onComplete}>
-      {isActive && (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+      style={{ zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }}
+    >
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0, y: 40 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        transition={{ type: 'spring', damping: 20, stiffness: 200 }}
+        className="text-center"
+      >
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-          style={{ zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }}
-        >
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0, y: 40 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 1.2, opacity: 0 }}
-            transition={{ type: 'spring', damping: 20, stiffness: 200 }}
-            className="text-center"
-          >
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
-              className="mb-4 mx-auto"
-              style={{
-                width: '60px', height: '60px',
-                borderRadius: '50%',
-                border: `3px solid ${COLORS.purple}`,
-                borderTopColor: 'transparent',
-              }}
-            />
-            <h2 className="text-white fw-bold mb-2">Перехід до блоку</h2>
-            <p className="text-secondary">Зачекайте, відбувається синхронізація</p>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
+          className="mb-4 mx-auto"
+          style={{
+            width: '60px', height: '60px',
+            borderRadius: '50%',
+            border: `3px solid ${COLORS.purple}`,
+            borderTopColor: 'transparent',
+          }}
+        />
+        <h2 className="text-white fw-bold mb-2">Перехід до блоку</h2>
+        <p className="text-secondary">Зачекайте, відбувається синхронізація</p>
+      </motion.div>
+    </motion.div>
   );
 };
 
@@ -288,8 +283,12 @@ const HomeRP = () => {
     month: 'long',
   }).format(today);
 
-  const handleBlockClick = (link) => {
+const handleBlockClick = (link) => {
     setExitingBlock({ active: true, link });
+    // Перехід через 1.5 секунди (поки показується анімація)
+    setTimeout(() => {
+      window.location.href = link;
+    }, 1500);
   };
 
   const handleExitComplete = () => {
@@ -442,8 +441,6 @@ const HomeRP = () => {
       {/* Анімація переходу */}
       <BlockTransition
         isActive={exitingBlock.active}
-        targetLink={exitingBlock.link}
-        onComplete={handleExitComplete}
       />
     </div>
   );
